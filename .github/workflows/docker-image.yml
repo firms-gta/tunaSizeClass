@@ -18,7 +18,7 @@ on:
         default: "build" 
       
 env:
-  CACHE_IMAGE: ghcr.io/firms-gta/darwin_core_viewer-cache
+  CACHE_IMAGE: ghcr.io/firms-gta/tunaSizeClass-cache
   DOCKER_BUILDKIT: 1
   RENV_PATHS_ROOT: /root/.cache/R/renv
 
@@ -45,7 +45,7 @@ jobs:
         if: ${{ contains(github.event.inputs.action, 'push') }}
         uses: docker/metadata-action@v4
         with:
-          images: ghcr.io/firms-gta/darwin_core_viewer
+          images: ghcr.io/firms-gta/tunaSizeClass
           flavor: latest=true
           tags: |
             type=ref,event=branch
@@ -54,7 +54,7 @@ jobs:
           labels: |
             org.opencontainers.image.url=${{ github.repository }}
             org.opencontainers.image.source=${{ github.repository }}
-            org.opencontainers.image.title=darwin_core_viewer
+            org.opencontainers.image.title=tunaSizeClass
             org.opencontainers.image.description=Interactive Shiny application to visualize Darwin Core
             org.opencontainers.image.vendor=IRD
             org.opencontainers.image.author=Bastien Grasset <julien.barde@ird.fr>
@@ -90,7 +90,7 @@ jobs:
               --progress=plain \
               --build-arg RENV_PATHS_ROOT=${{ env.RENV_PATHS_ROOT }} \
               --build-arg RENV_LOCK_HASH=${{ env.renv_lock_hash }} \
-              --tag ghcr.io/firms-gta/darwin_core_viewer:${BRANCH_NAME} \
+              --tag ghcr.io/firms-gta/tunaSizeClass:${BRANCH_NAME} \
               --output type=docker,dest=/tmp/docker-image.tar \
               .
           else
@@ -101,7 +101,7 @@ jobs:
               --cache-to type=registry,ref=$CACHE_IMAGE:${BRANCH_NAME},mode=max \
               --build-arg RENV_PATHS_ROOT=${{ env.RENV_PATHS_ROOT }} \
               --build-arg RENV_LOCK_HASH=${{ env.renv_lock_hash }} \
-              --tag ghcr.io/firms-gta/darwin_core_viewer:${BRANCH_NAME} \
+              --tag ghcr.io/firms-gta/tunaSizeClass:${BRANCH_NAME} \
               --output type=docker,dest=/tmp/docker-image.tar \
               .
           fi
@@ -120,10 +120,10 @@ jobs:
 
           # Check if the branch is main
           if [ "$BRANCH_NAME" = "main" ]; then
-            docker tag ghcr.io/firms-gta/darwin_core_viewer:${BRANCH_NAME} ghcr.io/firms-gta/darwin_core_viewer:latest
-            docker push ghcr.io/firms-gta/darwin_core_viewer:latest
+            docker tag ghcr.io/firms-gta/tunaSizeClass:${BRANCH_NAME} ghcr.io/firms-gta/tunaSizeClass:latest
+            docker push ghcr.io/firms-gta/tunaSizeClass:latest
           else
-            docker tag ghcr.io/firms-gta/darwin_core_viewer:${BRANCH_NAME} ghcr.io/firms-gta/darwin_core_viewer:latest
-            docker push ghcr.io/firms-gta/darwin_core_viewer:latest
+            docker tag ghcr.io/firms-gta/tunaSizeClass:${BRANCH_NAME} ghcr.io/firms-gta/tunaSizeClass:latest
+            docker push ghcr.io/firms-gta/tunaSizeClass:latest
           fi
 
