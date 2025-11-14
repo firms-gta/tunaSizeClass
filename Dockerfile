@@ -31,6 +31,8 @@ RUN apt-get update && apt-get install -y \
     libjq-dev \
     git \
     libfontconfig1-dev \
+    libharfbuzz-dev \
+    libfribidi-dev \
     make
     
 ## update system libraries
