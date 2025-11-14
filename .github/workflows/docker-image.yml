@@ -54,7 +54,7 @@ jobs:
           labels: |
             org.opencontainers.image.url=${{ github.repository }}
             org.opencontainers.image.source=${{ github.repository }}
-            org.opencontainers.image.title=tunaSizeClass
+            org.opencontainers.image.title=tunasizeclass
             org.opencontainers.image.description=Interactive Shiny application to visualize Darwin Core
             org.opencontainers.image.vendor=IRD
             org.opencontainers.image.author=Bastien Grasset <julien.barde@ird.fr>
@@ -120,10 +120,10 @@ jobs:
 
           # Check if the branch is main
           if [ "$BRANCH_NAME" = "main" ]; then
-            docker tag ghcr.io/firms-gta/tunasizeclass:${BRANCH_NAME} ghcr.io/firms-gta/tunaSizeClass:latest
+            docker tag ghcr.io/firms-gta/tunasizeclass:${BRANCH_NAME} ghcr.io/firms-gta/tunasizeclass:latest
             docker push ghcr.io/firms-gta/tunasizeclass:latest
           else
-            docker tag ghcr.io/firms-gta/tunasizeclass:${BRANCH_NAME} ghcr.io/firms-gta/tunaSizeClass:latest
+            docker tag ghcr.io/firms-gta/tunasizeclass:${BRANCH_NAME} ghcr.io/firms-gta/tunasizeclass:latest
             docker push ghcr.io/firms-gta/tunasizeclass:latest
           fi
 
