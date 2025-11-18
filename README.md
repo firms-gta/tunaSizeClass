@@ -11,7 +11,7 @@ Pulling the image and running it
 ``` sh
 
 docker pull ghcr.io/firms-gta/tunasizeclass:latest
-docker run -p 3838:3838 -v ghcr.io/firms-gta/tunasizeclass:latest 
+sudo docker run --name tunasizeclass -p 3838:3838 ghcr.io/firms-gta/tunasizeclass:latest 
 ```
 
 #### Build and Run Locally
