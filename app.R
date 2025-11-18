@@ -24,6 +24,7 @@ source("./data/bindDatasets.R")
 }
 futile.logger::flog.info("Load data")
 data_dwc <- readRDS(filepath)
+# View(data_dwc)
 futile.logger::flog.info("Set default values for filters to be displayed by UI and used by server to filter and process data")
 default_geom <- st_as_sfc(st_bbox(data_dwc))
 default_wkt <- sf::st_as_text(default_geom)
@@ -139,12 +140,12 @@ ui <- fluidPage(
                           ),
                           
                           absolutePanel(id = "plots", class = "panel panel-default", fixed = TRUE,
-                                        draggable = TRUE, top = "12%", left = "auto", right="1%", width = "25%", height = "30%",
+                                        draggable = TRUE, top = "12%", left = "auto", right="1%", #width = "25%", # height = "30%",
                                         # top = "12%", right = "1.5%", width = "auto", #fixed=TRUE,
                                         h2(paste0("Group identifier: ")),
                                         textOutput("idGroup"),
                                         # tags$br(),
-                                        plotlyOutput("pie_map", height = '70%')
+                                        plotlyOutput("bar_plot")
                                         ),
                           absolutePanel(id = "logo", class = "logo", bottom = "2%", left = "2%", width = "auto", fixed=FALSE, draggable = TRUE, height = "auto",
                                         tags$a(href='https://www.ird.fr/', tags$img(src='logo_IRD.svg',height='5%'))),
@@ -178,7 +179,6 @@ ui <- fluidPage(
                                  )
              )
   )
-# )
 )
 
 ################################################################ SERVER ###################################################################################################################################################
@@ -210,23 +210,22 @@ server <- function(input, output, session) {
     wkt(default_wkt)
     current_geom(default_geom)
     updateTextInput(session, "polygon", value = default_wkt)
-    updatePickerInput(session,"year",choices = target_year$year, selected = NULL )
-    updatePickerInput(session,"family",choices = target_family$family, selected = NULL )
-    updatePickerInput(session,"species",choices = target_species$scientificName, selected = NULL)
+    updatePickerInput(session,"year",choices = target_year, selected = NULL )
+    updatePickerInput(session,"family",choices = target_family, selected = NULL )
+    updatePickerInput(session,"species",choices = target_species, selected = NULL)
   },
   ignoreInit = TRUE)
   
   
   data <- eventReactive(input$submit, {
-    if(is.null(input$species)){filter_species=target_species$scientificName}else{filter_species=input$species}
-    if(is.null(input$family)){filter_family=target_family$family}else{filter_family=input$family}
-    if(is.null(input$year)){filter_year=target_year$year}else{filter_year=input$year}
+    if(is.null(input$species)){filter_species=target_species}else{filter_species=input$species}
+    # if(is.null(input$family)){filter_family=target_family$family}else{filter_family=input$family}
+    if(is.null(input$year)){filter_year=target_year}else{filter_year=input$year}
     data_dwc %>% 
       filter(year %in% filter_year) %>%
-      filter(family %in% filter_family) %>% 
+      # filter(family %in% filter_family) %>% 
       filter(scientificName %in% filter_species) %>%
-      dplyr::filter(st_within(geom,st_as_sfc(input$polygon, crs = 4326), sparse = FALSE)) # %>% head(500)
-
+      dplyr::filter(st_within(geom,st_as_sfc(input$polygon, crs = 4326), sparse = FALSE))
         },ignoreNULL = FALSE)
   
   
@@ -234,10 +233,8 @@ server <- function(input, output, session) {
     sizeClassData <- strsplit(data()$sizeClasses[current_gbifID()], ",")[[1]]  %>% 
       data.frame() %>% 
         dplyr::mutate(class=gsub("=.*", "",.), count=as.numeric(gsub(".*=", "",.)))
-      
-      },ignoreInit = TRUE)    
+      },ignoreInit = FALSE)    
     
-
 ############################################################# OUTPUTS   ############################################################# 
   output$idGroup <- renderText({
     current_gbifID()                   
@@ -260,18 +257,11 @@ server <- function(input, output, session) {
       errorClass = "myClass"
     )
     
-    
-    # df <- data_dwc %>% st_centroid() filter(st_within(geometry,st_as_sfc(default_wkt, crs = 4326),sparse = FALSE)[, 1]) 
     df <- data()  %>% st_centroid()
-    # current_selection <- st_sf(st_as_sfc(wkt(), crs = 4326))
     ongoing_geom <- current_geom()
-    # all_points <- df %>% st_buffer(2000) %>% st_combine() #%>% st_convex_hull(
     combine_geom <- df %>% st_union()
-    # plot(combine_geom)
     convex_hull <- combine_geom %>% st_convex_hull()
     all_points <- combine_geom %>% st_buffer(1)
-    # plot(all_points)
-    
     
     sizeClassData <- strsplit(df$sizeClasses[1], ",")[[1]] 
     
@@ -288,7 +278,7 @@ server <- function(input, output, session) {
       # https://leaflet-extras.github.io/leaflet-providers/preview/ 
       addProviderTiles("Esri.OceanBasemap", group = "bathymetry") %>%
       addProviderTiles("Esri.WorldImagery", group = "satellite") %>% 
-      # addPolygons(data = ongoing_geom,color="red",fillColor = "transparent", group="current_selection") %>%
+      addPolygons(data = ongoing_geom,color="red",fillColor = "transparent", group="current_selection") %>%
       addPolygons(data = convex_hull, color="blue",fillColor = "transparent", group="all_points") %>%
       addPolygons(data = all_points, color="blue",fillColor = "transparent", group="all_points") %>%
       clearBounds() %>%
@@ -329,30 +319,6 @@ server <- function(input, output, session) {
 
   })
   
-  # observeEvent(input$mymap_marker_click, { 
-  #   click <- input$map_marker_click
-  #   if(is.null(click))
-  #     return()
-  #   print(p)
-  # 
-  #   # popup <- popupImage(phdata)
-  #   # leafletProxy("map") %>% 
-  #   #   addMarkers( lng=-81, lat=37,popup=popup)
-  #   # 
-  #   # output$click_text <- renderText({
-  #   #   sizeClassData <- strsplit(data()$sizeClasses[1], ",")[[1]] 
-  #   #   
-  #   #   testdd <-as.data.frame(sizeClassData)  %>% 
-  #   #     dplyr::mutate(class=gsub("=.*", "",sizeClassData), count=as.numeric(gsub(".*=", "",sizeClassData)))
-  #   #   
-  #   #   
-  #   #   fig <- plot_ly(testdd, x = ~class, y = ~count, type = 'bar', name = 'Number of lines')
-  #   #   fig <- fig %>% layout(yaxis = list(title = 'Count'))
-  #   #   
-  #   #   fig
-  #   # })
-  #   
-  # })
   
 
   observe({
@@ -369,18 +335,14 @@ server <- function(input, output, session) {
     current_gbifID(input$mymap_marker_click$id)
 
     sizeClassData <- strsplit(data()$sizeClasses[input$mymap_marker_click$id], ",")[[1]]
-    # testdd <-as.data.frame(sizeClassData)  %>%
-    #   dplyr::mutate(class=gsub("=.*", "",sizeClassData), count=as.numeric(gsub(".*=", "",sizeClassData)))
 
-    # wkt(coord)
-    # updateTextInput(session,"polygon", value = coord)
-    testdd <-as.data.frame(sizeClassData)  %>% 
+    testdd <-as.data.frame(sizeClassData)  %>%
       dplyr::mutate(class=gsub("=.*", "",sizeClassData), count=as.numeric(gsub(".*=", "",sizeClassData)))
     fig <- plot_ly(testdd, x = ~class, y = ~count, type = 'bar', name = 'Number of lines')
     p2 <- fig %>% layout(yaxis = list(title = 'Count'))
     p2<-ggplot(data=testdd, aes(x=class, y=count)) +
       geom_bar(stat="identity")
-    
+
     leafletProxy(mapId = "mymap") %>%
       clearPopups() %>%
       addPopupGraphs(list(p2), group = "pt", width = 300, height = 400)
@@ -391,19 +353,14 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$mymap_draw_stop,{
-    # observe({
       #use the draw_stop event to detect when users finished drawing
-    # req(input$mymap_draw_new_feature)
     req(input$mymap_draw_stop)
     feature <- input$mymap_draw_new_feature
     print(feature)
     polygon_coordinates <- input$mymap_draw_new_feature$geometry$coordinates[[1]]
-    # see  https://rstudio.github.io/leaflet/shiny.html
     bb <- input$mymap_bounds 
     geom_polygon <- input$mymap_draw_new_feature$geometry
-    # drawn_polygon <- Polygon(do.call(rbind,lapply(polygon_coordinates,function(x){c(x[[1]][1],x[[2]][1])})))
     geoJson <- geojsonio::as.json(feature)
-    # spdf <- geojsonio::geojson_sp(feature)
     geom <- st_read(geoJson)
     coord <- st_as_text(st_geometry(geom[1,]))
     wkt(coord)
@@ -423,21 +380,26 @@ server <- function(input, output, session) {
     
     },ignoreInit = FALSE)
 
-  output$pie_map <- renderPlotly({
+  
+  
+  output$bar_plot <- renderPlotly({
     
     shiny::validate(
       need(nrow(plot_df())>0, 'Sorry no data with current filters !'),
       errorClass = "myClass"
     )
-    # gbifId=1
-    # sizeClassData <- strsplit(data()$sizeClasses[gbifId], ",")[[1]] 
+    # df_bar <- strsplit(data_dwc$sizeClasses[819], ",")[[1]]  %>%
+    #   data.frame() %>%
+    #   dplyr::mutate(class=gsub("=.*", "",.), count=as.numeric(gsub(".*=", "",.)))
+    df_bar <- plot_df()
+    # fig <- plot_ly(df_bar, x = factor(df_bar$class,levels=unique(df_bar$class)), y = ~count, type = 'bar', name = 'Number of lines')
+    # fig <- fig %>% layout(xaxis =  list(categoryorder = "ascending"), yaxis = list(title = 'Count'))
+    # 
+    fig <-ggplot(df_bar, aes(x=class, y=count))  + 
+      geom_bar(stat = "identity")
+      # coord_cartesian(ylim = c(0,50))
+    # fig
     
-    testdd <-plot_df()
-    
-    fig <- plot_ly(testdd, x = ~class, y = ~count, type = 'bar', name = 'Number of lines')
-    fig <- fig %>% layout(yaxis = list(title = 'Count'))
-    
-    fig
   })
   
 }
