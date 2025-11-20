@@ -159,6 +159,10 @@ ui <- fluidPage(
                       DT::dataTableOutput("DT_within_WKT")
                       # downloadButton("downloadCsv", "Download as CSV"),tags$br(),tags$br(),
              ),
+             tabPanel("Plot",
+                      hr(),
+                      # plotlyOutput("bar_plot")
+             ),
              navbarMenu("About",
                          tabPanel("About",
                                  fluidRow(
@@ -232,7 +236,7 @@ server <- function(input, output, session) {
   plot_df <- eventReactive(current_gbifID(), {
     sizeClassData <- strsplit(data()$sizeClasses[current_gbifID()], ",")[[1]]  %>% 
       data.frame() %>% 
-        dplyr::mutate(class=gsub("=.*", "",.), count=as.numeric(gsub(".*=", "",.)))
+      dplyr::mutate(class=gsub("=.*", "",.), count=as.numeric(gsub(".*=", "",.)), gbifID=current_gbifID())
       },ignoreInit = FALSE)    
     
 ############################################################# OUTPUTS   ############################################################# 
@@ -242,7 +246,9 @@ server <- function(input, output, session) {
 
     output$DT_within_WKT <- renderDT({
       # data() %>%  dplyr::filter(st_within(st_as_sfc(input$polygon, crs = 4326), sparse = FALSE))  %>% st_drop_geometry()
-      plot_df()
+      # plot_df()
+      data()$sizeClasses[current_gbifID()] %>% data.frame() 
+      # data() %>%  dplyr::filter(gbifID==current_gbifID())
     }) 
     
     # output$WKT <- renderText({
@@ -263,14 +269,13 @@ server <- function(input, output, session) {
     convex_hull <- combine_geom %>% st_convex_hull()
     all_points <- combine_geom %>% st_buffer(1)
     
-    sizeClassData <- strsplit(df$sizeClasses[1], ",")[[1]] 
-    
-    testdd <-as.data.frame(sizeClassData)  %>% 
-      dplyr::mutate(class=gsub("=.*", "",sizeClassData), count=as.numeric(gsub(".*=", "",sizeClassData)))
-    fig <- plot_ly(testdd, x = ~class, y = ~count, type = 'bar', name = 'Number of lines')
-    p2 <- fig %>% layout(yaxis = list(title = 'Count'))
-    p2<-ggplot(data=testdd, aes(x=class, y=count)) +
-      geom_bar(stat="identity")
+    # sizeClassData <- strsplit(df$sizeClasses[1], ",")[[1]] 
+    # testdd <-as.data.frame(sizeClassData)  %>% 
+    #   dplyr::mutate(class=gsub("=.*", "",sizeClassData), count=as.numeric(gsub(".*=", "",sizeClassData)))
+    # fig <- plot_ly(testdd, x = ~class, y = ~count, type = 'bar', name = 'Number of lines')
+    # p2 <- fig %>% layout(yaxis = list(title = 'Count'))
+    # p2<-ggplot(data=testdd, aes(x=class, y=count)) +
+    #   geom_bar(stat="identity")
     
     mymap <-leaflet::leaflet(data=df,options = leafletOptions(minZoom = 1, maxZoom = 40)) %>% 
       # clearPopups()  %>% 
@@ -325,29 +330,25 @@ server <- function(input, output, session) {
     click <- input$mymap_marker_click
     if (is.null(click))
       return()
-
     print(click)
-    text <-
-      paste("Lattitude ",
-            click$lat,
-            "Longtitude ",
-            click$lng)
+
     current_gbifID(input$mymap_marker_click$id)
-
-    sizeClassData <- strsplit(data()$sizeClasses[input$mymap_marker_click$id], ",")[[1]]
-
-    testdd <-as.data.frame(sizeClassData)  %>%
-      dplyr::mutate(class=gsub("=.*", "",sizeClassData), count=as.numeric(gsub(".*=", "",sizeClassData)))
-    fig <- plot_ly(testdd, x = ~class, y = ~count, type = 'bar', name = 'Number of lines')
-    p2 <- fig %>% layout(yaxis = list(title = 'Count'))
-    p2<-ggplot(data=testdd, aes(x=class, y=count)) +
-      geom_bar(stat="identity")
+    # testdd <-as.data.frame(strsplit(data()$sizeClasses[input$mymap_marker_click$id], ",")[[1]])
+    # text <-testdd
+    
+    #   dplyr::mutate(class=gsub("=.*", "",sizeClassData), count=as.numeric(gsub(".*=", "",sizeClassData)))
+    # fig <- plot_ly(testdd, x = ~class, y = ~count, type = 'bar', name = 'Number of lines')
+    # p2 <- fig %>% layout(yaxis = list(title = 'Count'))
+    # p2<-ggplot(data=testdd, aes(x=class, y=count)) +
+    #   geom_bar(stat="identity")
 
     leafletProxy(mapId = "mymap") %>%
       clearPopups() %>%
-      addPopupGraphs(list(p2), group = "pt", width = 300, height = 400)
-      # addPopups(dat = click, lat = ~lat, lng = ~lng, popup = input$mymap_marker_click$layerId)
-
+      addPopups(dat = click, lat = ~lat, lng = ~lng, popup = input$mymap_marker_click$layerId)
+    # addPopups(dat = click, lat = ~lat, lng = ~lng, popup = input$mymap_marker_click$layerId)
+    # showPopup(click$latitude, click$longtitude, text)
+    #   addPopupGraphs(list(p2), group = "pt", width = 300, height = 400)
+    
     # map$clearPopups()
     # map$showPopup(click$latitude, click$longtitude, text)
   })
@@ -388,15 +389,18 @@ server <- function(input, output, session) {
       need(nrow(plot_df())>0, 'Sorry no data with current filters !'),
       errorClass = "myClass"
     )
-    # df_bar <- strsplit(data_dwc$sizeClasses[819], ",")[[1]]  %>%
+    df_bar <- plot_df()
+    
+    # debug
+    # df_bar <- strsplit(data_dwc$sizeClasses[693], ",")[[1]]  %>%
     #   data.frame() %>%
     #   dplyr::mutate(class=gsub("=.*", "",.), count=as.numeric(gsub(".*=", "",.)))
-    df_bar <- plot_df()
-    # fig <- plot_ly(df_bar, x = factor(df_bar$class,levels=unique(df_bar$class)), y = ~count, type = 'bar', name = 'Number of lines')
-    # fig <- fig %>% layout(xaxis =  list(categoryorder = "ascending"), yaxis = list(title = 'Count'))
-    # 
-    fig <-ggplot(df_bar, aes(x=class, y=count))  + 
-      geom_bar(stat = "identity")
+    
+    fig <- plot_ly(df_bar, x = factor(df_bar$class,levels=unique(df_bar$class)), y = ~count, type = 'bar', name = 'Number of lines')
+    fig <- fig %>% layout(xaxis =  list(categoryorder = "ascending"), yaxis = list(title = 'Count'))
+    
+    # fig <-ggplot(df_bar, aes(x=class, y=count))  + 
+    #   geom_bar(stat = "identity")
       # coord_cartesian(ylim = c(0,50))
     # fig
     
