@@ -229,7 +229,8 @@ server <- function(input, output, session) {
       filter(year %in% filter_year) %>%
       # filter(family %in% filter_family) %>% 
       filter(scientificName %in% filter_species) %>%
-      dplyr::filter(st_within(geom,st_as_sfc(input$polygon, crs = 4326), sparse = FALSE))
+      dplyr::filter(st_within(geom,st_as_sfc(input$polygon, crs = 4326), sparse = FALSE)) %>% 
+      arrange(desc(gbifID))
         },ignoreNULL = FALSE)
   
   
@@ -288,11 +289,15 @@ server <- function(input, output, session) {
       addPolygons(data = all_points, color="blue",fillColor = "transparent", group="all_points") %>%
       clearBounds() %>%
       # addMarkers(~as_tibble(st_coordinates(geometry))$X,~as_tibble(st_coordinates(geometry))$Y,
-      addMarkers(group = "pt",lat = df$decimalLatitude, lng= df$decimalLongitude,
-                 #popup = ~as.character(sizeClasses),
+      addMarkers(group = "pt",
+                 lat = df$decimalLatitude, 
+                 lng= df$decimalLongitude,
+                 popup = ~as.character(sizeClasses),
                  #label = ~as.character(scientificName),
                  layerId = ~gbifID,
-                 clusterOptions = markerClusterOptions(removeOutsideVisibleBounds = F)
+                 # clusterOptions = markerClusterOptions(removeOutsideVisibleBounds = F),
+                 clusterOptions = markerClusterOptions(removeOutsideVisibleBounds = FALSE,zoomToBoundsOnClick = TRUE),
+                 
                  ) %>% 
       # addPopupGraphs(list(p2), group = "pt", width = 300, height = 400)  %>% 
         addDrawToolbar(
@@ -321,7 +326,6 @@ server <- function(input, output, session) {
         )
       )
     # mymap
-
   })
   
   
@@ -342,9 +346,9 @@ server <- function(input, output, session) {
     # p2<-ggplot(data=testdd, aes(x=class, y=count)) +
     #   geom_bar(stat="identity")
 
-    leafletProxy(mapId = "mymap") %>%
-      clearPopups() %>%
-      addPopups(dat = click, lat = ~lat, lng = ~lng, popup = input$mymap_marker_click$layerId)
+    # leafletProxy(mapId = "mymap") %>%
+    #   clearPopups() %>%
+    #   addPopups(dat = click, lat = ~lat, lng = ~lng, popup = input$mymap_marker_click$layerId)
     # addPopups(dat = click, lat = ~lat, lng = ~lng, popup = input$mymap_marker_click$layerId)
     # showPopup(click$latitude, click$longtitude, text)
     #   addPopupGraphs(list(p2), group = "pt", width = 300, height = 400)
@@ -374,14 +378,12 @@ server <- function(input, output, session) {
     east <- polygon_coordinates[[1]][[2]]
     west <- polygon_coordinates[[2]][[2]]
     
-    
     if(is.null(polygon_coordinates))
       return()
     text<-paste("North ", north, "South ", east)
     
     },ignoreInit = FALSE)
 
-  
   
   output$bar_plot <- renderPlotly({
     
@@ -392,12 +394,14 @@ server <- function(input, output, session) {
     df_bar <- plot_df()
     
     # debug
-    # df_bar <- strsplit(data_dwc$sizeClasses[693], ",")[[1]]  %>%
+    # df_bar <- strsplit(data_dwc$sizeClasses[821], ",")[[1]]  %>%
     #   data.frame() %>%
     #   dplyr::mutate(class=gsub("=.*", "",.), count=as.numeric(gsub(".*=", "",.)))
     
-    fig <- plot_ly(df_bar, x = factor(df_bar$class,levels=unique(df_bar$class)), y = ~count, type = 'bar', name = 'Number of lines')
-    fig <- fig %>% layout(xaxis =  list(categoryorder = "ascending"), yaxis = list(title = 'Count'))
+    fig <- plot_ly(df_bar, x = factor(df_bar$class,levels=unique(df_bar$class)), y = ~count, type = 'bar', name = 'Number of lines') 
+    fig
+    # %>% 
+    #   layout(xaxis =  list(categoryorder = "ascending"), yaxis = list(title = 'Count'))
     
     # fig <-ggplot(df_bar, aes(x=class, y=count))  + 
     #   geom_bar(stat = "identity")
